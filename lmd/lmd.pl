@@ -98,6 +98,7 @@ my $INTERFACE	= {
 };
 my $VARIABLES	= {};
 my $MENU	= {};
+my $MODULES	= {};
 my $LANG	= 'EN';
 my @DISABLED    = ();
 my %ATTRIBUTES  = ();
@@ -188,7 +189,6 @@ if( defined $options{'init'} )
 	    next if( defined $CAPABILITIES->{$modul}->{disabled}->[0] );
 	    foreach my $r ( @{$CAPABILITIES->{$modul}->{allowedRole}} )
 	    {
-		next if( ! isModuleAllowed('r',$r,$modul) );
 		my %menu = ();
 		$menu{title} = $CAPABILITIES->{$modul}->{title}->[0];
 		if( defined $CAPABILITIES->{$modul}->{help} )
@@ -196,6 +196,8 @@ if( defined $options{'init'} )
 		    $menu{help} = $CAPABILITIES->{$modul}->{help}->[0];
 		}
 		$menu{order} = $CAPABILITIES->{$modul}->{order} ? $CAPABILITIES->{$modul}->{order}->[0] : 1000;
+		$MODULES->{$r}->{$CAPABILITIES->{$modul}->{category}->[0]}->{$modul} = \%menu;
+		next if( ! isModuleAllowed('r',$r,$modul) );
 		$MENU->{$r}->{$CAPABILITIES->{$modul}->{category}->[0]}->{$modul} = \%menu;
 	    }
 	    $o     = `echo "" | $i interface`;
@@ -243,7 +245,6 @@ if( defined $options{'init'} )
 	    #Generate Menu
 	    foreach my $r ( @{$CAPABILITIES->{$modul}->{allowedRole}} )
 	    {
-		next if( ! isModuleAllowed('r',$r,$modul) );
 		my %menu = ();
 		$menu{title} = $CAPABILITIES->{$modul}->{title}->[0];
 		if( defined $CAPABILITIES->{$modul}->{help} )
@@ -251,6 +252,8 @@ if( defined $options{'init'} )
 		    $menu{help} = $CAPABILITIES->{$modul}->{help}->[0];
 		}
 		$menu{order} = $CAPABILITIES->{$modul}->{order} ? $CAPABILITIES->{$modul}->{order}->[0] : 1000;
+		$MODULES->{$r}->{$CAPABILITIES->{$modul}->{category}->[0]}->{$modul} = \%menu;
+		next if( ! isModuleAllowed('r',$r,$modul) );
 		$MENU->{$r}->{$CAPABILITIES->{$modul}->{category}->[0]}->{$modul} = \%menu;
 	    }
 	    my $tmp = $modul->interface;
@@ -271,6 +274,7 @@ if( defined $options{'init'} )
 	AddSessionDatas(encode_base64(freeze($CAPABILITIES),''),'CAPABILITIES','BASE');
 	AddSessionDatas(encode_base64(freeze($VARIABLES),''),'VARIABLES','BASE');
 	AddSessionDatas(encode_base64(freeze($MENU),''),'MENU','BASE');
+	AddSessionDatas(encode_base64(freeze($MODULES),''),'MODULES','BASE');
 	foreach my $f ( glob("/usr/share/lmd/lang/*ini") )
 	{
 		if( $f =~ /\/usr\/share\/lmd\/lang\/[^_]+_(.*)\.ini/ )
@@ -586,6 +590,31 @@ sub isAllowed
 	return 1;
 }
 
+sub isDenied($$$)
+{
+	my ( $type, $owner, $dest ) = @_;
+	my $sel  = $DBH->prepare("SELECT `right` FROM acls WHERE type='$type' AND owner='$owner' AND destination='$dest'" );
+	$sel->execute;
+	my $value = $sel->fetch();
+	if( defined $value->[0] )
+	{
+		return ( $value->[0] eq 'n' ) ? 1 : 0 ;
+	}
+	return 0;
+}
+
+sub addRight($$$$)
+{
+	my ( $type, $owner, $dest, $right ) = @_;
+print STDERR "$type, $owner, $dest, $right\n";
+	$DBH->do("INSERT INTO acls VALUES('$type', '$owner', '$dest', '$right')" );
+}
+
+sub delRight($$$)
+{
+	my ( $type, $owner, $dest ) = @_;
+	$DBH->do("DELETE  FROM acls WHERE type='$type' AND owner='$owner' AND destination='$dest'" );
+}
 #########################################
 # START Soubrutines for the xml parsing #
 #########################################
@@ -822,6 +851,7 @@ sub EndTag
 	    }
 	    elsif( ! defined $INTERFACE->{$APPLICATION}->{$ACTION} )
 	    {
+		print STDERR "BAD_ACTION : $APPLICATION $ACTION \n";
 	        RequestError('3');
 	    }
 	    #Save the request if neccesary;
