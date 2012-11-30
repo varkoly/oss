@@ -58,30 +58,45 @@ sub default
 	my $this   = shift;
 	my $reply  = shift;
 	my @modules= ();
+	my $path   = $reply->{apps} || "roles";
 	my $MENU   = thaw(decode_base64(main::GetSessionDatas('MODULES','BASE')));
-	my $apps   = '<dir lanbel="'.main::__("Roles").'" path="roles">'."\n";
+	my $apps   = '<dir label="'.main::__("Roles").'" path="roles">'."\n";
 
-	foreach my $role ( keys %{$MENU} )
+	foreach my $role ( sort keys %{$MENU} )
 	{
+		my $tmp = substr( $path,0,length("roles/$role"));
+		if( "roles/$role" ne $tmp && "roles/$role/" ne "$tmp/" )
+		{
+			$apps   .= '  <dir label="'.main::__($role)."\" path=\"roles/$role\"/>\n";
+			next;
+		}
 		$apps   .= '  <dir label="'.main::__($role)."\" path=\"roles/$role\">\n";
 		foreach my $cat ( keys %{$MENU->{$role}} )
 		{
 			if( main::isDenied("r","$role","C:$cat") || main::isDenied("r","*","C:$cat") )
 			{
-				$apps   .= '    <dir label="('.main::__($cat).")\" path=\"$role|C:$cat\">\n";
+				$apps   .= '    <dir label="('.main::__($cat).")\" path=\"roles/$role/$cat\"/>\n";
+				next;
 			}
 			else
 			{
-				$apps   .= '    <dir label="'.main::__($cat)."\" path=\"$role|C:$cat\">\n";
+				$tmp = substr( $path,0,length("roles/$role/$cat"));
+				if( "roles/$role/$cat" ne $tmp )
+				{
+					$apps   .= '    <dir label="'.main::__($cat)."\" path=\"roles/$role/$cat\"/>\n";
+					next;
+				}
+				$apps   .= '    <dir label="'.main::__($cat)."\" path=\"roles/$role/$cat\">\n";
 				foreach my $mod ( keys %{$MENU->{$role}->{$cat}} )
 				{
 					if( main::isDenied("r","$role","$mod") || main::isDenied("r","*","$mod") )
 					{
-						$apps   .= '      <dir label="('.main::__($mod).")\" path=\"$role|$mod\">\n";
+						$apps   .= '      <dir label="('.main::__($mod).")\" path=\"roles/$role/$cat/$mod\"/>\n";
+						next;
 					}
 					else
 					{
-						$apps   .= '      <dir label="'.main::__($mod)."\" path=\"$role|$mod\">\n";
+						$apps   .= '      <dir label="'.main::__($mod)."\" path=\"roles/$role/$cat/$mod\">\n";
 					}
 					$apps   .= "      </dir>\n";
 				}
@@ -92,11 +107,9 @@ sub default
 	}
 	$apps .= '</dir>';
 	my @ret = ( { apps      => $apps } );
-print STDERR $reply->{apps}."\n";
-	if( defined $reply->{apps} && $reply->{apps} =~ /\|/ )
+	if( $path =~ /roles\/.*\// )
 	{
 		push @ret, { rightaction    => 'toggle' };
-		push @ret, { rightaction    => 'toggleall' };
 	}
 	return \@ret;
 }
@@ -106,7 +119,17 @@ sub toggle
 {
 	my $this   = shift;
 	my $reply  = shift;
-	my ( $role , $dest ) = split( /\|/,$reply->{apps} );
+	my ( $nix, $role , $cat, $mod, $func ) = split( /\//,$reply->{apps} );
+	my $dest   = "C:$cat";
+
+	if( defined $func )
+	{
+		$dest=$func;
+	}
+	elsif( defined $mod )
+	{
+		$dest=$mod;
+	}
 
 	if( main::isDenied("r","$role","$dest") )
 	{
@@ -116,23 +139,7 @@ sub toggle
 	{
 		main::addRight("r","$role","$dest","n");
 	}
-	$this->default();
+	$this->default($reply);
 }
 
-sub toggleall
-{
-	my $this   = shift;
-	my $reply  = shift;
-	my ( $role , $dest ) = split( /\|/,$reply->{apps} );
-
-	if( main::isDenied("r","*","$dest") )
-	{
-		main::delRight("r","*","$dest");
-	}
-	else
-	{
-		main::addRight("r","*","$dest","n");
-	}
-	$this->default();
-}
 1;
