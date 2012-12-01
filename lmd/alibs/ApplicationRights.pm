@@ -73,7 +73,7 @@ sub default
 		$apps   .= '  <dir label="'.main::__($role)."\" path=\"roles/$role\">\n";
 		foreach my $cat ( keys %{$MENU->{$role}} )
 		{
-			if( main::isDenied("r","$role","C:$cat") || main::isDenied("r","*","C:$cat") )
+			if( main::isDenied("r","$role","C:$cat") )
 			{
 				$apps   .= '    <dir label="('.main::__($cat).")\" path=\"roles/$role/$cat\"/>\n";
 				next;
@@ -89,7 +89,7 @@ sub default
 				$apps   .= '    <dir label="'.main::__($cat)."\" path=\"roles/$role/$cat\">\n";
 				foreach my $mod ( keys %{$MENU->{$role}->{$cat}} )
 				{
-					if( main::isDenied("r","$role","$mod") || main::isDenied("r","*","$mod") )
+					if( main::isDenied("r","$role","$mod") )
 					{
 						$apps   .= '      <dir label="('.main::__($mod).")\" path=\"roles/$role/$cat/$mod\"/>\n";
 						next;
@@ -131,7 +131,11 @@ sub toggle
 		$dest=$mod;
 	}
 
-	if( main::isDenied("r","$role","$dest") )
+	if( main::isDenied("r","$role","$dest") == 2 && $role ne '*' )
+	{
+		main::addRight("r","$role","$dest","y");
+	}
+	elsif( main::isDenied("r","$role","$dest") == 1 )
 	{
 		main::delRight("r","$role","$dest");
 	}

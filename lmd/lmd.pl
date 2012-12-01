@@ -602,6 +602,13 @@ sub isDenied($$$)
 	{
 		return ( $value->[0] eq 'n' ) ? 1 : 0 ;
 	}
+	$sel  = $DBH->prepare("SELECT `right` FROM acls WHERE type='r' AND owner='*' AND destination='$dest'" );
+	$sel->execute;
+	$value = $sel->fetch();
+	if( defined $value->[0] )
+	{
+		return ( $value->[0] eq 'n' ) ? 2 : 0 ;
+	}
 	return 0;
 }
 
