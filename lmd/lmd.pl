@@ -197,6 +197,7 @@ if( defined $options{'init'} )
 		}
 		$menu{order} = $CAPABILITIES->{$modul}->{order} ? $CAPABILITIES->{$modul}->{order}->[0] : 1000;
 		$MODULES->{$r}->{$CAPABILITIES->{$modul}->{category}->[0]}->{$modul} = \%menu;
+		$MODULES->{'*'}->{$CAPABILITIES->{$modul}->{category}->[0]}->{$modul} = \%menu;
 		next if( ! isModuleAllowed('r',$r,$modul) );
 		$MENU->{$r}->{$CAPABILITIES->{$modul}->{category}->[0]}->{$modul} = \%menu;
 	    }
@@ -253,6 +254,7 @@ if( defined $options{'init'} )
 		}
 		$menu{order} = $CAPABILITIES->{$modul}->{order} ? $CAPABILITIES->{$modul}->{order}->[0] : 1000;
 		$MODULES->{$r}->{$CAPABILITIES->{$modul}->{category}->[0]}->{$modul} = \%menu;
+		$MODULES->{'*'}->{$CAPABILITIES->{$modul}->{category}->[0]}->{$modul} = \%menu;
 		next if( ! isModuleAllowed('r',$r,$modul) );
 		$MENU->{$r}->{$CAPABILITIES->{$modul}->{category}->[0]}->{$modul} = \%menu;
 	    }
@@ -606,7 +608,6 @@ sub isDenied($$$)
 sub addRight($$$$)
 {
 	my ( $type, $owner, $dest, $right ) = @_;
-print STDERR "$type, $owner, $dest, $right\n";
 	$DBH->do("INSERT INTO acls VALUES('$type', '$owner', '$dest', '$right')" );
 }
 
